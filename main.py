@@ -291,9 +291,9 @@ if __name__ == '__main__':
     lines_img, lines = findlines(edges)
 
     cv2.imwrite('output/lines_' + img_name, lines_img)
-    cv2.imshow('output/Original', img)
-    # cv2.imshow("output/Canny", edges)
-    cv2.imshow("output/Lines", lines_img)
+    cv2.imshow('Original', img)
+    # cv2.imshow("Canny", edges)
+    cv2.imshow("Lines", lines_img)
 
     sampled = sample(lines, 10)
 
