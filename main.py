@@ -275,7 +275,6 @@ if __name__ == '__main__':
     img_name = 'input/bottiglia.PNG'
     # img_name = 'input/colors.jpg'
     img_name = 'input/logo.jpg'
-    img_name = 'input/logo2.jpeg'
 
     img = cv2.imread(img_name)
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
