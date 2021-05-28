@@ -6,7 +6,7 @@ import svgwrite
 # For HSV: hue range is [0,179], saturation range is [0,255], and value range is [0,255].
 
 def vectorize(img_x, img_y, _sampled):
-    svg = svgwrite.Drawing(filename="Prova.svg", size=(str(img_y) + 'px', str(img_x) + 'px'))
+    svg = svgwrite.Drawing(filename="output/Vectorized.svg", size=(str(img_y) + 'px', str(img_x) + 'px'))
     path = ''
 
     marker = svg.marker(insert=(1, 1), size=(4, 4), orient='auto')
@@ -272,10 +272,10 @@ def test_is_segment(_segment_map, _lines, _lines_img):
 
 
 if __name__ == '__main__':
-    img_name = 'bottiglia.PNG'
-    # img_name = 'colors.jpg'
-    img_name = 'logo.jpg'
-    img_name = 'logo2.jpeg'
+    img_name = 'input/bottiglia.PNG'
+    # img_name = 'input/colors.jpg'
+    img_name = 'input/logo.jpg'
+    img_name = 'input/logo2.jpeg'
 
     img = cv2.imread(img_name)
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -286,14 +286,14 @@ if __name__ == '__main__':
     # kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
     # edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
-    cv2.imwrite('edges_' + img_name, edges)
+    cv2.imwrite('output/edges_' + img_name, edges)
 
     lines_img, lines = findlines(edges)
 
-    cv2.imwrite('lines_' + img_name, lines_img)
-    cv2.imshow('Original', img)
-    # cv2.imshow("Canny", edges)
-    cv2.imshow("Lines", lines_img)
+    cv2.imwrite('output/lines_' + img_name, lines_img)
+    cv2.imshow('output/Original', img)
+    # cv2.imshow("output/Canny", edges)
+    cv2.imshow("output/Lines", lines_img)
 
     sampled = sample(lines, 10)
 
