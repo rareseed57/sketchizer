@@ -63,46 +63,57 @@ def sample(lines, step):
     return samples
 
 
-def find_flex(derivatives, flex_thresh, n_chances=2):
-    second_chance = False
-    candidate_flex = ()
-    rising = False
-    flexes = {}
+def find_flex(derivatives, sampled, flex_thresh, n_chances=2):
+    ### Inizialitation of variables ###
+    candidate_flex = ()  # Registers the candidate flex before confirming it
+    rising = False  # True if the derivative is rising
+    flexes = {}  # Dict to save the flexes
+    corner = False
+    nTemp_chances = 0
     for line_key in derivatives:
-        flexes[line_key] = []
+        flexes[line_key] = []  # Init of the list of flexes in the current segment
         count = 1
-        ders = derivatives[line_key]
+        ders = derivatives[line_key]  # Get the derivatives of the current segment
         for der in ders:
-            if count <= len(ders) - 1:
-                corner = abs(ders[count][1] - der[1] > flex_thresh)
-                if ders[count][1] > der[1]:
-                    if not rising:
-                        if not second_chance or not corner:
-                            second_chance = True
-                            candidate_flex = ders[count][0]
+            if count <= len(ders) - 1:  # Check of the loop
+                corner = corner or abs(ders[count][1] - der[1]) > flex_thresh
+                flexes[line_key].append((sampled[line_key][0], True))
+                flexes[line_key].append((sampled[line_key][-1], True))
+                # If the second derivative is greater than the
+                # treshold, set the
+                # flex as a corner
+                if ders[count][1] > der[1]:  # If the derivative is greater than before (I'M RISING)
+                    if not rising:  # If i wasn't rising
+                        if nTemp_chances <= n_chances:
+                            nTemp_chances += 1
+                            candidate_flex = ders[count][0] if nTemp_chances == 1 else candidate_flex
                         else:
-                            second_chance = False
+                            nTemp_chances = 0
                             flexes[line_key].append((candidate_flex, corner))
+                            corner = False
                             candidate_flex = ()
                             rising = True
-                    else:
-                        second_chance = False
+                    else:  # If i was rising already
+                        nTemp_chances = 0
                         candidate_flex = ()
-                else:
-                    if rising:
-                        if not second_chance:
-                            second_chance = True
-                            candidate_flex = ders[count][0]
+                        corner = False
+                else:  # If the derivative is lower than before (I'M DESCENDING)
+                    if rising:  # If i was rising
+                        if nTemp_chances <= n_chances:
+                            nTemp_chances += 1
+                            candidate_flex = ders[count][0] if nTemp_chances == 1 else candidate_flex
                         else:
-                            second_chance = False
+                            nTemp_chances = 0
                             flexes[line_key].append((candidate_flex, corner))
+                            corner = False
                             rising = False
                             candidate_flex = ()
-                    else:
-                        second_chance = False
+                    else:  # If i wasn't rising already
+                        nTemp_chances = 0
                         candidate_flex = ()
+                        corner = False
             count = count + 1
-        if len(flexes[line_key]) == 0:
+        if len(flexes[line_key]) == 0:  # Delete empty flexes arrays
             del flexes[line_key]
     return flexes
 
@@ -118,12 +129,13 @@ def is_segment(sampled, dev_thresh, img_height, lines_img):
             continue
         for der in sampled[line_key]:
             delta_x = der[0] - sampled[line_key][count - 2][0]
+            delta_y = der[1] - sampled[line_key][count - 2][1]
             if delta_x == 0:
-                derivatives[line_key].append(((sampled[line_key][count - 2]), 1))
+                derivatives[line_key].append(((sampled[line_key][count - 2]), 1 if delta_y > 0 else -1))
             else:
                 # normalized derivative = ( Δy / Δx ) / max_derivative
                 derivatives[line_key].append(((sampled[line_key][count - 2]),
-                                              (der[1] - sampled[line_key][count - 2][1] / delta_x) / img_height))
+                                              (delta_y / delta_x) / img_height))
             count = count + 1
 
     segment_map = {}

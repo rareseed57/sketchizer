@@ -8,6 +8,9 @@ import analyzer
 # For HSV: hue range is [0,179], saturation range is [0,255], and value range is [0,255].
 
 def refresh(hsv):
+
+    ### Getting and checking all the values of the trackbars into variables #################
+
     thresh1hue = cv2.getTrackbarPos('Hue L', 'Original')
     thresh2hue = cv2.getTrackbarPos('Hue H', 'Original')
 
@@ -31,6 +34,8 @@ def refresh(hsv):
     thresh1can = cv2.getTrackbarPos('Canny L', 'Lines')
     thresh2can = cv2.getTrackbarPos('Canny H', 'Lines')
 
+    ### Inverting the thresholds if inconsistent #################
+
     if thresh2hue < thresh1hue:
         tmp = thresh2hue
         thresh2hue = thresh1hue
@@ -50,29 +55,29 @@ def refresh(hsv):
     img_bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
     cv2.imshow('Original', img_bgr)
 
-    _img_bn = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _blurred = cv2.blur(_img_bn, (blur_ratio, blur_ratio))
-    _edges = cv2.Canny(_blurred, thresh1can, thresh2can)
+    img_bn = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.blur(img_bn, (blur_ratio, blur_ratio))
+    edges = cv2.Canny(blurred, thresh1can, thresh2can)
 
-    _lines_img, _lines = analyzer.findlines(_edges)
-    print(_lines)
+    lines_img, lines = analyzer.findlines(edges)
+    print(lines)
 
-    cv2.imshow("Lines", _lines_img)
+    cv2.imshow("Lines", lines_img)
 
-    _sampled = analyzer.sample(_lines.copy(), sample_step)
+    sampled = analyzer.sample(lines.copy(), sample_step)
 
-    _segment_map, _derivatives = analyzer.is_segment(_sampled, der_thresh / 1000, img.shape[1], _lines_img.copy())
+    segment_map, derivatives = analyzer.is_segment(sampled, der_thresh / 1000, img.shape[1], lines_img.copy())
     # tests.test_is_segment(_segment_map, _lines.copy(), _lines_img.copy())
 
-    _flexes = analyzer.find_flex(_derivatives, flex_thresh / 1000, n_chances)
+    flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 1000000, n_chances)
 
-    tests.test(_lines_img.copy(), _sampled, _flexes.copy())
-    print('sampled:' + str(_sampled))
-    print('derivatives:' + str(_derivatives))
-    print('segments:' + str(_segment_map))
-    print('flexes:' + str(_flexes))
+    tests.test(lines_img.copy(), sampled, flexes.copy())
+    print('sampled:' + str(sampled))
+    print('derivatives:' + str(derivatives))
+    print('segments:' + str(segment_map))
+    print('flexes:' + str(flexes))
 
-    vectorizer.vectorize_samples(_edges.shape[0], _edges.shape[1], _sampled)
+    vectorizer.vectorize_samples(edges.shape[0], edges.shape[1], sampled)
     print('\n')
 
 
@@ -82,15 +87,19 @@ def on_trackbar(val, hsv):
 
 if __name__ == '__main__':
     img_name = 'input/bottiglia.PNG'
-    # img_name = 'input/colors.jpg'
-    # img_name = 'input/logo.jpg'
+    img_name = 'input/colors.jpg'
+    #img_name = 'input/logo.jpg'
 
-    # Image reading and conversion to HSV color spasce to carry out a tresholding ###
+    # Image reading and conversion to HSV color spasce to carry out a tresholding ###############
 
     img = cv2.imread(img_name)
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
+    # Trackbar creation to adjust tresholds and settings #########################################
+
     refresh(img_hsv.copy())
+
+    # Trackbars for tresholding
 
     cv2.createTrackbar('Hue L', 'Original', 0, 179, lambda x: on_trackbar(x, img_hsv.copy()))
     cv2.createTrackbar('Hue H', 'Original', 179, 179, lambda x: on_trackbar(x, img_hsv.copy()))
@@ -99,9 +108,13 @@ if __name__ == '__main__':
     # cv2.createTrackbar('Value 1', title_window, 0, 255, lambda x: on_trackbar(x, img_hsv.copy()))
     # cv2.createTrackbar('Value 2', title_window, 255, 255, lambda x: on_trackbar(x, img_hsv.copy()))
 
+    # Trackbars to adjust image clean-up and edge detection filters (before starting the actual algorithm)
+
     cv2.createTrackbar('Blur ratio', 'Lines', 50, 100, lambda x: on_trackbar(x, img_hsv.copy()))
     cv2.createTrackbar('Canny L', 'Lines', 100, 500, lambda x: on_trackbar(x, img_hsv.copy()))
     cv2.createTrackbar('Canny H', 'Lines', 200, 500, lambda x: on_trackbar(x, img_hsv.copy()))
+
+    # Trackbars to adjust the analyzer settings
 
     cv2.createTrackbar('Sampling step', 'Test', 10, 100, lambda x: on_trackbar(x, img_hsv.copy()))
     cv2.createTrackbar('Derivative thresh', 'is_segment test', 1, 1000, lambda x: on_trackbar(x, img_hsv.copy()))

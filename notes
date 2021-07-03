@@ -55,3 +55,48 @@ img_name = 'input/bottiglia.PNG'
     print('derivatives:' + str(derivatives))
     print('segments:' + str(segment_map))
     print('flexes:' + str(flexes))
+
+IS SEGMENT FUNCTION
+
+def is_segment(sampled, dev_thresh, img_height, lines_img):
+    # img height should be the maximum derivative possible
+    derivatives = {}  # Init of the derivatives dict
+    for line_key in sampled.keys():  # For each sample
+        if len(sampled[line_key]) > 1:  # If the segment is too short, ignore it
+            count = 1  # Init a counter
+            derivatives[line_key] = []  # Init the list for the current line
+        else:
+            continue
+        for smp in sampled[line_key]:
+            if count < len(sampled[line_key]):
+                # Compute deltas for each line between two samples
+                delta_x = sampled[line_key][count][0] - sampled[line_key][count - 1][0]
+                delta_y = sampled[line_key][count][1] - sampled[line_key][count - 1][1]
+                if delta_x == 0:
+                    if delta_y > 0 :
+                        derivatives[line_key].append(((sampled[line_key][count][0]), 1))
+                    else:
+                        derivatives[line_key].append(((sampled[line_key][count][0]), -1))
+                else:
+                    # normalized derivative = ( Δy / Δx ) / max_derivative
+                    derivatives[line_key].append((sampled[line_key][count] , (delta_y / delta_x) / img_height))
+                count = count + 1
+
+    segment_map = {}
+
+    for line_key in derivatives.keys():
+        delta_x = sampled[line_key][-1][0] - sampled[line_key][0][0]
+        if delta_x == 0:
+            overall_derivative = 1
+        else:
+            overall_derivative = (sampled[line_key][-1][1] - sampled[line_key][0][1] / delta_x) / img_height
+        count = 0
+        for der in derivatives[line_key]:
+            delta_der = abs((der[1] - overall_derivative))
+            if delta_der > dev_thresh:
+                segment_map[line_key] = (overall_derivative, False)
+                continue
+            elif count == len(derivatives[line_key][1]) - 1:
+                segment_map[line_key] = (overall_derivative, True)
+            count = count + 1
+    return segment_map, derivatives
