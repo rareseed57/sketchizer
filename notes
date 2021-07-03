@@ -1,0 +1,57 @@
+ALTRO METODO DI VETTORIZZAZIONE
+
+# vectorize_flexes(_edges.shape[0], _edges.shape[1], _flexes)
+    # x = {}
+    # y = {}
+
+    # for k in _sampled.keys():
+    #     x[k] = []
+    #     y[k] = []
+    #     if len(_sampled[k]) > 2:
+    #         for node in _sampled[k]:
+    #             y[k].append(-node[0])
+    #             x[k].append(node[1])
+    #         f = interp1d(x[k], y[k])
+    #         plt.plot(x[k], f(x[k]), '-')
+
+    # plt.savefig('C:/Users/rares/PycharmProjects/CVProject/graph.svg')
+    # plt.show()
+
+MAIN
+
+img_name = 'input/bottiglia.PNG'
+    img_name = 'input/colors.jpg'
+    # img_name = 'input/logo.jpg'
+
+    img = cv2.imread(img_name)
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+
+    img_bn = cv2.imread(img_name, 0)
+    blurred = cv2.blur(img_bn, (3, 3))
+    edges = cv2.Canny(blurred, 100, 200)
+
+    # kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    # edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+
+    cv2.imwrite('output/edges_' + img_name, edges)
+
+    lines_img, lines = analyzer.findlines(edges)
+
+    cv2.imwrite('output/lines_' + img_name, lines_img)
+    cv2.imshow('Original', img)
+    # cv2.imshow("Canny", edges)
+    cv2.imshow("Lines", lines_img)
+
+    sampled = analyzer.sample(lines, 10)
+
+    segment_map, derivatives = analyzer.is_segment(sampled.copy(), 0.3, img.shape[1], lines_img.copy())
+    # tests.test_is_segment(segment_map, lines, lines_img.copy())
+
+    flexes = analyzer.find_flex(derivatives, 0.3)
+
+    tests.test(lines_img.copy(), sampled.copy(), flexes.copy())
+    print('sampled:' + str(sampled))
+    print('derivatives:' + str(derivatives))
+    print('segments:' + str(segment_map))
+    print('flexes:' + str(flexes))
