@@ -60,7 +60,8 @@ def refresh(hsv):
     edges = cv2.Canny(blurred, thresh1can, thresh2can)
 
     lines_img, lines = analyzer.findlines(edges)
-    print(lines)
+    lines_img, lines = analyzer.mergelines(lines, lines_img)
+    print('lines:' + str(lines))
 
     cv2.imshow("Lines", lines_img)
 
@@ -72,10 +73,10 @@ def refresh(hsv):
     flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 1000000, n_chances)
 
     tests.test(lines_img.copy(), sampled, flexes.copy())
-    print('sampled:' + str(sampled))
-    print('derivatives:' + str(derivatives))
-    print('segments:' + str(segment_map))
-    print('flexes:' + str(flexes))
+    # print('sampled:' + str(sampled))
+    # print('derivatives:' + str(derivatives))
+    # print('segments:' + str(segment_map))
+    # print('flexes:' + str(flexes))
 
     vectorizer.vectorize_samples(edges.shape[0], edges.shape[1], sampled)
     print('\n')
@@ -87,8 +88,8 @@ def on_trackbar(val, hsv):
 
 if __name__ == '__main__':
     img_name = 'input/bottiglia.PNG'
-    img_name = 'input/colors.jpg'
-    #img_name = 'input/logo.jpg'
+    # img_name = 'input/colors.jpg'
+    # img_name = 'input/logo.jpg'
 
     # Image reading and conversion to HSV color spasce to carry out a tresholding ###############
 

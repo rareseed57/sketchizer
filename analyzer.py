@@ -1,6 +1,43 @@
 import cv2
 import numpy as np
 
+p = [0, -1, -1, -1, 0, +1, -1, +1]
+s = [-1, -1, 0, +1, +1, +1, 0, -1]
+
+for j in zip(p, s):
+    if not all(j):
+        print('h' + str(j))
+
+
+def mergelines(lines_dict, lines_img):
+    lines_img = cv2.cvtColor(lines_img, cv2.COLOR_BGR2HSV)
+    trash = []
+
+    for i in lines_dict:
+        for h in lines_dict:
+            if checkinrange(lines_dict[i][-1], lines_dict[h][0]):
+                color = lines_img[lines_dict[h][0]]
+                # print(str(lines_dict[h][0]) + ' close to ' + str(lines_dict[i][-1]))
+                # print('mergeing ' + i + ' with ' + h + '...')
+                tmp = lines_dict[i].copy()
+                tmp.extend(lines_dict[h])
+                lines_dict[h] = tmp
+
+                for pixel in lines_dict[i]:
+                    lines_img[pixel] = color
+                trash.append(i)
+    '''
+    for i in trash:
+        del lines_dict[i]
+    '''
+    return cv2.cvtColor(lines_img, cv2.COLOR_HSV2BGR), lines_dict
+
+
+def checkinrange(center, target, r=1):
+    if target[0] in range(center[0] - r, center[0] + r + 1) and target[1] in range(center[1] - r, center[1] + r + 1):
+        return True
+    return False
+
 
 def checkandappend(r, c, r2, c2, lines, lines_list):
     if r2 < 0 or r2 >= lines.shape[0] or c2 < 0 or c2 >= lines.shape[1]:
@@ -8,7 +45,12 @@ def checkandappend(r, c, r2, c2, lines, lines_list):
     if lines[r2, c2][0] != 0:
         # print(_lines[_r2][_c2])
         index = str(lines[r2][c2][0]) + str(lines[r2][c2][1])
-        if r2 == lines_list[index][-1][0] and c2 == lines_list[index][-1][1]:
+        last = lines_list[index][-1]
+        # if r2 == last[0] and c2 == last[1]:
+        # if any(last[0] == r + i[0] and last[1] == c + i[1] for i in zip(p, s)):
+        # if last == (r, c - 1) or last == (r - 1, c - 1) or last == (r - 1, c) or last == (r - 1, c) or last == (
+        # r - 1, c + 1) or last == (r + 1, c + 1) or last == (r + 1, c) or last == (r + 1, c + 1):
+        if checkinrange((r, c), last):
             lines[r][c] = lines[r2][c2]
             lines_list[index].append((r, c))
             return True
@@ -22,13 +64,6 @@ def findlines(edges):
     lines_img = np.zeros((edges.shape[0], edges.shape[1], 3), np.uint8)
 
     lines_img = cv2.cvtColor(lines_img, cv2.COLOR_RGB2HSV)
-
-    p = [0, -1, -1, -1, 0, +1, -1, +1]
-    s = [-1, -1, 0, +1, +1, +1, 0, -1]
-
-    for i in zip(p, s):
-        if not all(i):
-            print('h' + str(i))
 
     for r in range(0, edges.shape[0]):
         for c in range(0, edges.shape[1]):
