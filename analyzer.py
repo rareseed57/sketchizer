@@ -10,26 +10,32 @@ for j in zip(p, s):
 
 
 def mergelines(lines_dict, lines_img):
-    lines_img = cv2.cvtColor(lines_img, cv2.COLOR_BGR2HSV)
     trash = []
 
-    for i in lines_dict:
-        for h in lines_dict:
-            if checkinrange(lines_dict[i][-1], lines_dict[h][0]):
-                color = lines_img[lines_dict[h][0]]
-                # print(str(lines_dict[h][0]) + ' close to ' + str(lines_dict[i][-1]))
-                # print('mergeing ' + i + ' with ' + h + '...')
-                tmp = lines_dict[i].copy()
-                tmp.extend(lines_dict[h])
-                lines_dict[h] = tmp
+    for current in lines_dict:
+        if current not in trash:
+            for connected in lines_dict:
+                if connected not in trash:
+                    head_connected = checkinrange(lines_dict[current][0], lines_dict[connected][-1], 2)
+                    tail_connected = checkinrange(lines_dict[current][-1], lines_dict[connected][0], 2)
+                    if head_connected or tail_connected:
+                        color = lines_img[lines_dict[current][0]]
+                        if head_connected:
+                            tmp = lines_dict[connected].copy()
+                            tmp.extend(lines_dict[current])
+                            lines_dict[current] = tmp
+                        elif tail_connected:
+                            tmp = lines_dict[current].copy()
+                            tmp.extend(lines_dict[connected])
+                            lines_dict[current] = tmp
+                        for pixel in lines_dict[connected]:
+                            lines_img[pixel] = color
+                        trash.append(connected)
+                        break
 
-                for pixel in lines_dict[i]:
-                    lines_img[pixel] = color
-                trash.append(i)
-    '''
     for i in trash:
         del lines_dict[i]
-    '''
+
     return cv2.cvtColor(lines_img, cv2.COLOR_HSV2BGR), lines_dict
 
 
@@ -77,7 +83,7 @@ def findlines(edges):
                     lines_dict[str(current_hue) + str(current_sat)] = [(r, c)]
                     current_hue = current_hue + 1
 
-    return cv2.cvtColor(lines_img, cv2.COLOR_HSV2BGR), lines_dict
+    return lines_img, lines_dict
 
 
 def sample(lines, step):
@@ -93,7 +99,7 @@ def sample(lines, step):
                     samples[line_key] = []
                 samples[line_key].append(pixel)
             count = count + 1
-        if len(samples[line_key]) < 3:
+        if len(samples[line_key]) < 2:
             del samples[line_key]
     return samples
 
