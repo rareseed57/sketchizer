@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 
-p = [0, -1, -1, -1, 0, +1, +1, +1]
-s = [-1, -1, 0, +1, +1, +1, 0, -1]
+p = [0, -1, 0, +1, +1, -1, -1, +1]
+s = [-1, 0, +1, 0, -1, -1, +1, +1]
 
-for j in zip(p, s):
-    print(j)
+# for j in zip(p, s):
+#     print(j)
 
 
 def checkinrange(center, target, r=1):
@@ -20,7 +20,7 @@ def check1around(coords, edges_img, lines_img):
         r2 = r + i[0]
         c2 = c + i[1]
         if not (r2 < 0 or r2 >= edges_img.shape[0] or c2 < 0 or c2 >= edges_img.shape[1]):
-            if edges_img[r2, c2] and not lines_img[r2, c2][2]:
+            if edges_img[r2][c2] and not lines_img[r2][c2][2]:
                 return r2, c2
     return False
 
@@ -33,12 +33,9 @@ def findlines(edges_img):
 
     lines_img = cv2.cvtColor(lines_img, cv2.COLOR_RGB2HSV)
 
-    print(edges_img.shape[0])
-    print(edges_img.shape[1])
-
     for r in range(0, edges_img.shape[0] - 1):
         for c in range(0, edges_img.shape[1] - 1):
-            if edges_img[r, c] and not lines_img[r, c][2]:
+            if edges_img[r][c] and not lines_img[r][c][2]:
                 # Define the color
                 if current_hue > 179:
                     cycle += 1

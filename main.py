@@ -62,6 +62,7 @@ def refresh(hsv):
     # edges = cv2.morphologyEx(edges, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3)))
 
     ### USING FUNCTION IN OPENCV ########################
+    '''
     # Find contours
     contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # Draw contours
@@ -72,8 +73,8 @@ def refresh(hsv):
     # Show in a window
     cv2.imshow('Contours', drawing)
 
-    print(contours)
-
+    # print(contours)
+    '''
     ### USING OWN FUNCTIONS ########################
 
     lines_img, lines = analyzer.findlines(edges)
@@ -86,6 +87,8 @@ def refresh(hsv):
     for i in lines.values():
         totalsum += len(i)
     print('Average lenght: ' + str(totalsum / lenght))
+
+    print('\n'+str(lines))
 
     cv2.imshow("Lines", lines_img)
 
@@ -103,7 +106,8 @@ def refresh(hsv):
     # print('flexes:' + str(flexes))
 
     vectorizer.vectorize_samples(edges.shape[0], edges.shape[1], sampled)
-    print('\n')
+
+    cv2.imwrite('output/linesoutput.png', lines_img)
 
 
 def on_trackbar(val, hsv):
@@ -111,9 +115,11 @@ def on_trackbar(val, hsv):
 
 
 if __name__ == '__main__':
-    img_name = 'input/bottiglia.PNG'
+    # img_name = 'input/bottiglia.PNG'
     # img_name = 'input/colors.jpg'
-    # img_name = 'input/logo.jpg'
+    img_name = 'input/logo.jpg'
+    # img_name = 'input/debug.jpg'
+    # img_name = 'input/debug2.jpg'
 
     # Image reading and conversion to HSV color spasce to carry out a tresholding ###############
 
