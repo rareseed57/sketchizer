@@ -18,8 +18,7 @@ def vectorize_flexes(img_x, img_y, flexes):
             corner = False
             count = 0
             for node in flexes[k]:
-                if node[1]:
-                    corner = True  # The node will be a cusp
+                corner = node[1]  # The node will be a cusp
                 if count == 0:
                     path = 'M ' + str(node[0][1]) + ',' + str(node[0][0]) + ' ' + str(node[0][1]) + ',' + str(
                         node[0][0]) + ' \n'

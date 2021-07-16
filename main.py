@@ -3,12 +3,12 @@ import cv2
 import vectorizer
 import tests
 import analyzer
+import random as rng
 
 
 # For HSV: hue range is [0,179], saturation range is [0,255], and value range is [0,255].
 
 def refresh(hsv):
-
     ### Getting and checking all the values of the trackbars into variables #################
 
     thresh1hue = cv2.getTrackbarPos('Hue L', 'Original')
@@ -58,13 +58,36 @@ def refresh(hsv):
     img_bn = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.blur(img_bn, (blur_ratio, blur_ratio))
     edges = cv2.Canny(blurred, thresh1can, thresh2can)
+    # edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3)))
+    # edges = cv2.morphologyEx(edges, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3)))
+
+    ### USING FUNCTION IN OPENCV ########################
+    # Find contours
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # Draw contours
+    drawing = np.zeros((edges.shape[0], edges.shape[1], 3), dtype=np.uint8)
+    for i in range(len(contours)):
+        color = (rng.randint(0, 256), rng.randint(0, 256), rng.randint(0, 256))
+        cv2.drawContours(drawing, contours, i, color, 2, cv2.LINE_8, hierarchy, 0)
+    # Show in a window
+    cv2.imshow('Contours', drawing)
+
+    print(contours)
+
+    ### USING OWN FUNCTIONS ########################
 
     lines_img, lines = analyzer.findlines(edges)
-    lines_img_rough = lines_img.copy()
-    lines_img, lines = analyzer.mergelines(lines, lines_img)
-    print('lines:' + str(lines))
+    lines_img = cv2.cvtColor(lines_img, cv2.COLOR_HSV2BGR)
+    totalsum = 0
+    lenght = len(lines)
+    if lenght == 0:
+        lenght = 1
+    print('Number of lines: ' + str(lenght))
+    for i in lines.values():
+        totalsum += len(i)
+    print('Average lenght: ' + str(totalsum / lenght))
 
-    cv2.imshow("Lines", lines_img_rough)
+    cv2.imshow("Lines", lines_img)
 
     sampled = analyzer.sample(lines.copy(), sample_step)
 
@@ -89,8 +112,8 @@ def on_trackbar(val, hsv):
 
 if __name__ == '__main__':
     img_name = 'input/bottiglia.PNG'
-    #img_name = 'input/colors.jpg'
-    img_name = 'input/logo.jpg'
+    # img_name = 'input/colors.jpg'
+    # img_name = 'input/logo.jpg'
 
     # Image reading and conversion to HSV color spasce to carry out a tresholding ###############
 
