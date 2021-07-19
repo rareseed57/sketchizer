@@ -17,86 +17,9 @@ ALTRO METODO DI VETTORIZZAZIONE
     # plt.savefig('C:/Users/rares/PycharmProjects/CVProject/graph.svg')
     # plt.show()
 
-MAIN
-
-img_name = 'input/bottiglia.PNG'
-    img_name = 'input/colors.jpg'
-    # img_name = 'input/logo.jpg'
-
-    img = cv2.imread(img_name)
-    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-
-    img_bn = cv2.imread(img_name, 0)
-    blurred = cv2.blur(img_bn, (3, 3))
-    edges = cv2.Canny(blurred, 100, 200)
-
-    # kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-    # edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-
-    cv2.imwrite('output/edges_' + img_name, edges)
-
-    lines_img, lines = analyzer.findlines(edges)
-
-    cv2.imwrite('output/lines_' + img_name, lines_img)
-    cv2.imshow('Original', img)
-    # cv2.imshow("Canny", edges)
-    cv2.imshow("Lines", lines_img)
-
-    sampled = analyzer.sample(lines, 10)
-
-    segment_map, derivatives = analyzer.is_segment(sampled.copy(), 0.3, img.shape[1], lines_img.copy())
-    # tests.test_is_segment(segment_map, lines, lines_img.copy())
-
-    flexes = analyzer.find_flex(derivatives, 0.3)
-
-    tests.test(lines_img.copy(), sampled.copy(), flexes.copy())
-    print('sampled:' + str(sampled))
-    print('derivatives:' + str(derivatives))
-    print('segments:' + str(segment_map))
-    print('flexes:' + str(flexes))
-
-IS SEGMENT FUNCTION
-
-def is_segment(sampled, dev_thresh, img_height, lines_img):
-    # img height should be the maximum derivative possible
-    derivatives = {}  # Init of the derivatives dict
-    for line_key in sampled.keys():  # For each sample
-        if len(sampled[line_key]) > 1:  # If the segment is too short, ignore it
-            count = 1  # Init a counter
-            derivatives[line_key] = []  # Init the list for the current line
-        else:
-            continue
-        for smp in sampled[line_key]:
-            if count < len(sampled[line_key]):
-                # Compute deltas for each line between two samples
-                delta_x = sampled[line_key][count][0] - sampled[line_key][count - 1][0]
-                delta_y = sampled[line_key][count][1] - sampled[line_key][count - 1][1]
-                if delta_x == 0:
-                    if delta_y > 0 :
-                        derivatives[line_key].append(((sampled[line_key][count][0]), 1))
-                    else:
-                        derivatives[line_key].append(((sampled[line_key][count][0]), -1))
-                else:
-                    # normalized derivative = ( Δy / Δx ) / max_derivative
-                    derivatives[line_key].append((sampled[line_key][count] , (delta_y / delta_x) / img_height))
-                count = count + 1
-
-    segment_map = {}
-
-    for line_key in derivatives.keys():
-        delta_x = sampled[line_key][-1][0] - sampled[line_key][0][0]
-        if delta_x == 0:
-            overall_derivative = 1
-        else:
-            overall_derivative = (sampled[line_key][-1][1] - sampled[line_key][0][1] / delta_x) / img_height
-        count = 0
-        for der in derivatives[line_key]:
-            delta_der = abs((der[1] - overall_derivative))
-            if delta_der > dev_thresh:
-                segment_map[line_key] = (overall_derivative, False)
-                continue
-            elif count == len(derivatives[line_key][1]) - 1:
-                segment_map[line_key] = (overall_derivative, True)
-            count = count + 1
-    return segment_map, derivatives
+<?php
+            $filename = "C:\Users\rares\PycharmProjects\CVProject\output\Vectorized_sample"
+            $handle = fopen($filename, "r");
+            $contents = fread($handle, filesize($filename));
+            echo($contents)
+        ?>

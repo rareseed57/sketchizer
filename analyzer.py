@@ -94,17 +94,19 @@ def find_flex(derivatives, sampled, flex_thresh, n_chances=2):
         flexes[line_key] = []  # Init of the list of flexes in the current segment
         count = 1
         ders = derivatives[line_key]  # Get the derivatives of the current segment
+        # Add the first and last sample as corners
+        # flexes[line_key].append((sampled[line_key][0], True))
+        # flexes[line_key].append((sampled[line_key][-1], True))
+        rising = ders[1][1] > ders[0][1]
         for der in ders:
             if count <= len(ders) - 1:  # Check of the loop
                 corner = corner or abs(ders[count][1] - der[1]) > flex_thresh
-                flexes[line_key].append((sampled[line_key][0], True))
-                flexes[line_key].append((sampled[line_key][-1], True))
                 # If the second derivative is greater than the
                 # treshold, set the
                 # flex as a corner
                 if ders[count][1] > der[1]:  # If the derivative is greater than before (I'M RISING)
                     if not rising:  # If i wasn't rising
-                        if nTemp_chances <= n_chances:
+                        if nTemp_chances < n_chances:
                             nTemp_chances += 1
                             candidate_flex = ders[count][0] if nTemp_chances == 1 else candidate_flex
                         else:
@@ -119,7 +121,7 @@ def find_flex(derivatives, sampled, flex_thresh, n_chances=2):
                         corner = False
                 else:  # If the derivative is lower than before (I'M DESCENDING)
                     if rising:  # If i was rising
-                        if nTemp_chances <= n_chances:
+                        if nTemp_chances < n_chances:
                             nTemp_chances += 1
                             candidate_flex = ders[count][0] if nTemp_chances == 1 else candidate_flex
                         else:

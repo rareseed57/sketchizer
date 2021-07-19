@@ -1,17 +1,14 @@
 import svgwrite
 
-
 def init(img_x, img_y):
     svg = svgwrite.Drawing(filename="output/Vectorized_sample.svg", size=(str(img_y) + 'px', str(img_x) + 'px'))
-    marker = svg.marker(insert=(1, 1), size=(4, 4), orient='auto')
-    marker.add(svg.circle((1, 1), r=0.5, fill='black'))
-    svg.defs.add(marker)
-    return svg, marker
+    return svg
 
 
-def vectorize_flexes(img_x, img_y, flexes):
-    svg, marker = init(img_x, img_y)
+def vectorize_flexes(img_x, img_y, flexes, filter='pencil'):
+    svg = init(img_x, img_y)
     path = ''
+    filter = "url(#" + filter + ")"
 
     for k in flexes.keys():
         if len(flexes[k]) > 2:
@@ -46,18 +43,18 @@ def vectorize_flexes(img_x, img_y, flexes):
             path = svg.path(d=path,
                             stroke="#000",
                             fill="none",
-                            stroke_width=3)
-
-            path.set_markers((marker, False, marker))
+                            stroke_width=3,
+                            filter=filter)
 
             svg.add(path)
     svg.save()
     return svg
 
 
-def vectorize_samples(img_x, img_y, sampled):
-    svg, marker = init(img_x, img_y)
+def vectorize_samples(img_x, img_y, sampled, filter='pencil'):
+    svg = init(img_x, img_y)
     path = ''
+    filter = "url(#" + filter + ")"
 
     for k in sampled.keys():
         if len(sampled[k]) > 2:
@@ -75,13 +72,11 @@ def vectorize_samples(img_x, img_y, sampled):
                 count = count + 1
 
             # print('Adding\n' + path + '\n')
-
             path = svg.path(d=path,
                             stroke="#000",
                             fill="none",
-                            stroke_width=3)
-
-            path.set_markers((marker, False, marker))
+                            stroke_width=4,
+                            filter=filter)
 
             svg.add(path)
     svg.save()
