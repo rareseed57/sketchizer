@@ -12,7 +12,7 @@ filter_ink = '<filter id="ink"><feTurbulence baseFrequency="0"/><feDisplacementM
              'scale="10"/></filter> '
 
 
-def test(lines_img, sampled, flexes):
+def test_flexes(lines_img, sampled, flexes):
     for line_key in sampled.keys():
         for pixel in sampled[line_key]:
             cv2.rectangle(lines_img, (pixel[1], pixel[0]), (pixel[1], pixel[0]), (255, 255, 255), 2)
@@ -22,6 +22,15 @@ def test(lines_img, sampled, flexes):
             cv2.circle(lines_img, (pixel[0][1], pixel[0][0]), 1, (0, 255, 0) if not pixel[1] else (0, 0, 255), 2)
 
     return lines_img
+
+
+def test_closures(img, lines, closures):
+    for line_key in lines.keys():
+        if line_key not in closures:
+            for pixel in lines[line_key]:
+                img[pixel] = (255, 255, 255)
+
+    return img
 
 
 def test_is_segment(segment_map, lines, lines_img):

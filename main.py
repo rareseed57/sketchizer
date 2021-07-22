@@ -102,7 +102,9 @@ def refresh():
         totalsum += len(i)
     print('Average lenght: ' + str(totalsum / lenght) + '\n')
 
-    cv2.imshow("Lines", resizeAR(edges, height=500))
+    closures = analyzer.check_closures(lines, 2)
+
+    cv2.imshow("Lines", resizeAR(tests.test_closures(lines_img.copy(), lines.copy(), closures), height=500))
 
     sampled = analyzer.sample(lines.copy(), sample_step)
 
@@ -111,7 +113,7 @@ def refresh():
 
     flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 100000, n_chances)
 
-    cv2.imshow("Test", resizeAR(tests.test(lines_img.copy(), sampled.copy(), flexes.copy()), height=500))
+    cv2.imshow("Test", resizeAR(tests.test_flexes(lines_img.copy(), sampled.copy(), flexes.copy()), height=500))
     # print('sampled:' + str(sampled))
     # print('derivatives:' + str(derivatives))
     # print('segments:' + str(segment_map))

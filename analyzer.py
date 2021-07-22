@@ -164,7 +164,6 @@ def compute_derivatives(sampled, img_height):
                 derivatives[line_key].append(((sampled[line_key][count - 2]),
                                               (delta_y / delta_x) / img_height))
             count = count + 1
-
     ''' 
     DEPRECATED #####################################
     segment_map = {}
@@ -185,8 +184,15 @@ def compute_derivatives(sampled, img_height):
                 segment_map[line_key] = (overall_derivative, True)
             count = count + 1
         '''
-
     return derivatives
+
+
+def check_closures(lines, r):
+    closures = []
+    for line_key in lines.keys():
+        if checkinrange(lines[line_key][0], lines[line_key][-1], r):
+            closures.append(line_key)
+    return closures
 
 
 '''
