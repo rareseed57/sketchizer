@@ -19,7 +19,6 @@ n_run = 0
 
 
 def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
-    dim = None
     (h, w) = image.shape[:2]
 
     if width is None and height is None:
@@ -31,6 +30,8 @@ def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
         r = width / float(w)
         dim = (width, int(h * r))
 
+    # Temporarily deactivates resizing
+    # return image
     return cv2.resize(image, dim, interpolation=inter)
 
 
@@ -53,7 +54,7 @@ def refresh():
     # thresh2val = cv2.getTrackbarPos('Value 2', 'Original')
 
     sample_step = cv2.getTrackbarPos('Sampling step', 'Test')
-    der_thresh = cv2.getTrackbarPos('Derivative thresh', 'is_segment test')
+    # der_thresh = cv2.getTrackbarPos('Derivative thresh', 'is_segment test') # deprecated
     flex_thresh = cv2.getTrackbarPos('Flex thresh', 'Test')
 
     n_chances = cv2.getTrackbarPos('#Chances', 'Test')
@@ -101,16 +102,16 @@ def refresh():
         totalsum += len(i)
     print('Average lenght: ' + str(totalsum / lenght) + '\n')
 
-    cv2.imshow("Lines", resizeAR(lines_img, height=500))
+    cv2.imshow("Lines", resizeAR(edges, height=500))
 
     sampled = analyzer.sample(lines.copy(), sample_step)
 
-    segment_map, derivatives = analyzer.is_segment(sampled, der_thresh / 1000, img.shape[1], lines_img.copy())
+    derivatives = analyzer.compute_derivatives(sampled, img.shape[1])
     # tests.test_is_segment(_segment_map, _lines.copy(), _lines_img.copy())
 
-    flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 1000000, n_chances)
+    flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 100000, n_chances)
 
-    cv2.imshow("Test", resizeAR(tests.test(lines_img.copy(), sampled, flexes.copy()), height=500))
+    cv2.imshow("Test", resizeAR(tests.test(lines_img.copy(), sampled.copy(), flexes.copy()), height=500))
     # print('sampled:' + str(sampled))
     # print('derivatives:' + str(derivatives))
     # print('segments:' + str(segment_map))
@@ -120,8 +121,8 @@ def refresh():
     tests.test_drawing()
 
     cv2.imwrite('output/linesoutput.png', lines_img)
-    if n_run == 1:
-        webbrowser.open("file://C:/Users/rares/PycharmProjects/CVProject/output/animation.html")
+    # if n_run == 1:
+    #   webbrowser.open("file://C:/Users/rares/PycharmProjects/CVProject/output/animation.html")
     n_run += 1
 
 
@@ -170,7 +171,7 @@ if __name__ == '__main__':
     # Trackbars to adjust the analyzer settings
 
     cv2.createTrackbar('Sampling step', 'Test', 10, 100, lambda x: refresh())
-    cv2.createTrackbar('Derivative thresh', 'is_segment test', 1, 1000, lambda x: refresh())
+    cv2.createTrackbar('Derivative thresh', 'is_segment test', 1, 1000, lambda: refresh())
 
     cv2.createTrackbar('Flex thresh', 'Test', 300, 1000, lambda x: refresh())
     cv2.createTrackbar('#Chances', 'Test', 2, 10, lambda x: refresh())
