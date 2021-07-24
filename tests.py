@@ -33,6 +33,17 @@ def test_closures(img, lines, closures):
     return img
 
 
+def test_shapes(img, lines, shapes):
+    for line_key in shapes.keys():
+        shape = shapes[line_key]
+        line = lines[line_key]
+        pixel = line[0]
+        color = (int(img[pixel][0]), int(img[pixel][1]), int(img[pixel][2]))
+        img = cv2.putText(img, shape, (pixel[1], pixel[0]), cv2.FONT_HERSHEY_SIMPLEX,
+                          0.5, color, 1, cv2.LINE_AA)
+    return img
+
+
 def test_is_segment(segment_map, lines, lines_img):
     for k in segment_map.keys():
         if segment_map[k][1]:

@@ -7,8 +7,8 @@ import random as rng
 from tkinter import *
 import webbrowser
 
-img_name = 'input/logo.jpg'
-img_list = ['logo.jpg', 'bottiglia.PNG', 'colors.jpg', 'debug.jpg', 'debug2.png']
+img_name = 'input/bottiglia.PNG'
+img_list = ['bottiglia.PNG', 'logo.jpg', 'debug.png', 'colors.jpg']
 img_index = 0
 
 brush_name = 'pencil'
@@ -16,6 +16,8 @@ brush_list = ['pencil', 'ink']
 brush_index = 0
 
 n_run = 0
+
+HEIGHT = 500
 
 
 def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
@@ -55,7 +57,7 @@ def refresh():
 
     sample_step = cv2.getTrackbarPos('Sampling step', 'Test')
     # der_thresh = cv2.getTrackbarPos('Derivative thresh', 'is_segment test') # deprecated
-    flex_thresh = cv2.getTrackbarPos('Flex thresh', 'Test')
+    corner_thresh = cv2.getTrackbarPos('Corner thresh', 'Test') / 1000
 
     n_chances = cv2.getTrackbarPos('#Chances', 'Test')
 
@@ -66,6 +68,7 @@ def refresh():
 
     thresh1can = cv2.getTrackbarPos('Canny L', 'Lines')
     thresh2can = cv2.getTrackbarPos('Canny H', 'Lines')
+    approx_factor = cv2.getTrackbarPos('Approx factor', 'Lines')/1000
 
     ### Inverting the thresholds if inconsistent #################
 
@@ -85,7 +88,7 @@ def refresh():
     hsv = cv2.merge([h, s, np.multiply(v, -mask)])
 
     img_bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    cv2.imshow('Original', resizeAR(img_bgr, height=500))
+    cv2.imshow('Original', resizeAR(img_bgr, height=HEIGHT))
 
     img_bn = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.blur(img_bn, (blur_ratio, blur_ratio))
@@ -104,16 +107,21 @@ def refresh():
 
     closures = analyzer.check_closures(lines, 2)
 
-    cv2.imshow("Lines", resizeAR(tests.test_closures(lines_img.copy(), lines.copy(), closures), height=500))
+    shapes = analyzer.detect_shapes(lines, closures, approx_factor=approx_factor)
+
+    test = tests.test_closures(lines_img.copy(), lines, closures)
+    test = tests.test_shapes(test, lines, shapes.copy())
+
+    cv2.imshow("Lines", resizeAR(test, height=HEIGHT))
 
     sampled = analyzer.sample(lines.copy(), sample_step)
 
-    derivatives = analyzer.compute_derivatives(sampled, img.shape[1])
+    derivatives = analyzer.compute_derivatives(sampled)
     # tests.test_is_segment(_segment_map, _lines.copy(), _lines_img.copy())
 
-    flexes = analyzer.find_flex(derivatives, sampled, flex_thresh / 100000, n_chances)
+    flexes = analyzer.find_flexes(derivatives, sampled, corner_thresh, closures, n_chances)
 
-    cv2.imshow("Test", resizeAR(tests.test_flexes(lines_img.copy(), sampled.copy(), flexes.copy()), height=500))
+    cv2.imshow("Test", resizeAR(tests.test_flexes(lines_img.copy(), sampled.copy(), flexes.copy()), height=HEIGHT))
     # print('sampled:' + str(sampled))
     # print('derivatives:' + str(derivatives))
     # print('segments:' + str(segment_map))
@@ -125,6 +133,7 @@ def refresh():
     cv2.imwrite('output/linesoutput.png', lines_img)
     # if n_run == 1:
     #   webbrowser.open("file://C:/Users/rares/PycharmProjects/CVProject/output/animation.html")
+
     n_run += 1
 
 
@@ -169,13 +178,14 @@ if __name__ == '__main__':
     cv2.createTrackbar('Blur ratio', 'Lines', 50, 100, lambda x: refresh())
     cv2.createTrackbar('Canny L', 'Lines', 100, 500, lambda x: refresh())
     cv2.createTrackbar('Canny H', 'Lines', 200, 500, lambda x: refresh())
+    cv2.createTrackbar('Approx factor', 'Lines', 900, 1000, lambda x: refresh())
 
     # Trackbars to adjust the analyzer settings
 
     cv2.createTrackbar('Sampling step', 'Test', 10, 100, lambda x: refresh())
     cv2.createTrackbar('Derivative thresh', 'is_segment test', 1, 1000, lambda: refresh())
 
-    cv2.createTrackbar('Flex thresh', 'Test', 300, 1000, lambda x: refresh())
+    cv2.createTrackbar('Corner thresh', 'Test', 80, 1000, lambda x: refresh())
     cv2.createTrackbar('#Chances', 'Test', 2, 10, lambda x: refresh())
 
     refresh()

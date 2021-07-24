@@ -1,3 +1,5 @@
+import math
+
 import cv2
 import numpy as np
 
@@ -86,67 +88,61 @@ def sample(lines, step):
     return samples
 
 
-def find_flex(derivatives, sampled, flex_thresh, max_chances=2):
+def find_flexes(derivatives, sampled, corner_thresh, closures, max_chances=2):
     ### Inizialitation of variables ###
-    candidate_flex = ()  # Registers the candidate flex before confirming it
-    rising = False  # True if the derivative is rising
     flexes = {}  # Dict to save the flexes
-    corner = False
     given_chanches = 0
-    for line_key in derivatives:
+    for line_key in derivatives.keys():
         flexes[line_key] = []  # Init of the list of flexes in the current segment
         count = 1
         ders = derivatives[line_key]  # Get the derivatives of the current segment
         # Add the first and last sample as corners
-        flexes[line_key].append((sampled[line_key][0], True))
-        flexes[line_key].append((sampled[line_key][-1], True))
+        if line_key not in closures:
+            flexes[line_key].append((sampled[line_key][0], True))
+            flexes[line_key].append((sampled[line_key][-1], True))
         rising = ders[1][1] > ders[0][1]
-        for der in ders:
-            if count <= len(ders) - 1:  # Check of the loop
-                corner = corner or abs(ders[count][1] - der[1]) > flex_thresh
-                # If the second derivative is greater than the
-                # treshold, set the
-                # flex as a corner
-                if ders[count][1] > der[1]:  # If i'm rising (the derivative is greater than before)
-                    if not rising:  # and i wasn't rising
-                        if given_chanches < max_chances:
-                            given_chanches += 1
-                            candidate_flex = ders[count][0] if given_chanches == 1 else candidate_flex
-                        else:
-                            given_chanches = 0
-                            candidate_flex = ders[count][0]
-                            flexes[line_key].append((candidate_flex, corner))
-                            corner = False
-                            candidate_flex = ()
-                            rising = True
-                    else:  # and i was already rising
+
+        while count <= len(ders) - 1:  # Check of the loop
+            der = ders[count - 1]
+            next_der = ders[count]
+            candidate_flex = der[0]
+            corner = abs(next_der[1] - der[1]) > corner_thresh
+            if corner:
+                given_chanches = 0
+                flexes[line_key].append((candidate_flex, True))
+                count += 1
+                continue
+            # If the second derivative is greater than the
+            # treshold, set the
+            # flex as a corner
+            candidate_flex = der[0] if given_chanches == 0 else candidate_flex
+            if next_der[1] > der[1]:  # If i'm rising (the derivative is greater than before)
+                if not rising:  # and i wasn't rising
+                    if given_chanches < max_chances:
+                        given_chanches += 1
+                    else:
                         given_chanches = 0
-                        candidate_flex = ()
-                        corner = False
-                else:  # If the derivative is lower than before (I'M DESCENDING)
-                    if rising:  # If i was rising
-                        if given_chanches < max_chances:
-                            given_chanches += 1
-                            candidate_flex = ders[count][0] if given_chanches == 1 else candidate_flex
-                        else:
-                            given_chanches = 0
-                            candidate_flex = ders[count][0]
-                            flexes[line_key].append((candidate_flex, corner))
-                            corner = False
-                            rising = False
-                            candidate_flex = ()
-                    else:  # If i wasn't rising already
+                        flexes[line_key].append((candidate_flex, False))
+                    rising = True
+                else:  # and i was already rising
+                    given_chanches = 0
+            else:  # If i'm descending (the derivative is lower than before)
+                if rising:  # If i was rising
+                    if given_chanches < max_chances:
+                        given_chanches += 1
+                    else:
                         given_chanches = 0
-                        candidate_flex = ()
-                        corner = False
-            count = count + 1
+                        flexes[line_key].append((candidate_flex, False))
+                    rising = False
+                else:  # If i wasn't rising already
+                    given_chanches = 0
+            count += 1
         if len(flexes[line_key]) == 0:  # Delete empty flexes arrays
             del flexes[line_key]
     return flexes
 
 
-def compute_derivatives(sampled, img_height):
-    # img height should be the maximum derivative possible
+def compute_derivatives(sampled):
     derivatives = {}
     for line_key in sampled.keys():
         if len(sampled[line_key]) > 1:
@@ -154,15 +150,14 @@ def compute_derivatives(sampled, img_height):
             derivatives[line_key] = []
         else:
             continue
-        for der in sampled[line_key]:
-            delta_x = der[0] - sampled[line_key][count - 2][0]
-            delta_y = der[1] - sampled[line_key][count - 2][1]
-            if delta_x == 0:
-                derivatives[line_key].append(((sampled[line_key][count - 2]), 1 if delta_y > 0 else -1))
-            else:
-                # normalized derivative = ( Δy / Δx ) / max_derivative
-                derivatives[line_key].append(((sampled[line_key][count - 2]),
-                                              (delta_y / delta_x) / img_height))
+        for pixel in sampled[line_key]:
+            coord1 = pixel
+            coord2 = sampled[line_key][count - 2]
+            delta_x = coord1[0] - coord2[0]
+            delta_y = coord1[1] - coord2[1]
+            # Using atan as a slope measure cause it can be evaluated between 0 and 1
+            slope = (math.atan2(delta_y, delta_x) / math.pi)
+            derivatives[line_key].append((coord1, slope))
             count = count + 1
     ''' 
     DEPRECATED #####################################
@@ -193,6 +188,67 @@ def check_closures(lines, r):
         if checkinrange(lines[line_key][0], lines[line_key][-1], r):
             closures.append(line_key)
     return closures
+
+
+def floodfill_line(line):
+    # Create an image containing the line
+    max_x = line[0][0]
+    max_y = line[0][1]
+    for pixel in line:
+        if pixel[0] > max_x:
+            max_x = pixel[0]
+        if pixel[1] > max_y:
+            max_y = pixel[1]
+    img = np.zeros((max_x + 2, max_y + 2, 1), np.uint8)
+    for pixel in line:
+        img[pixel] = 255
+
+    h, w = img.shape[:2]
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    cv2.floodFill(img, mask, (0, 0), 255)
+    img = cv2.bitwise_not(img)
+
+    return img
+
+
+def detect_shapes(lines, closures, approx_factor=0.9):
+    shapes = {}
+    for line_key in lines.keys():
+        img = floodfill_line(lines[line_key])
+        img = cv2.blur(img, (5, 5))
+        circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 1,
+                                   param1=50, param2=30, minRadius=0, maxRadius=0)
+        if circles is not None and len(circles) == 1:
+            shapes[line_key] = "circle"
+            # else check ellipses (not supported)
+        else:  # else check other shapes
+            if line_key not in closures:
+                continue  # discard lines that aren't closed
+
+            line = np.float32(lines[line_key])
+            perimeter = cv2.arcLength(line, True)
+            approx = cv2.approxPolyDP(line, approx_factor * perimeter, True)
+            # if the shape is a triangle, it will have 3 vertices
+            if len(approx) == 3:
+                shapes[line_key] = "triangle"
+
+            # if the shape has 4 vertices, it is either a square or
+            # a rectangle
+            elif len(approx) == 4:
+                # compute the bounding box of the contour and use the
+                # bounding box to compute the aspect ratio
+                (x, y, w, h) = cv2.boundingRect(approx)
+                ar = w / float(h)
+
+                # a square will have an aspect ratio that is approximately
+                # equal to one, otherwise, the shape is a rectangle
+                shapes[line_key] = "square" if 0.95 <= ar <= 1.05 else "rectangle"
+
+            # if the shape is a pentagon, it will have 5 vertices
+            elif len(approx) == 5:
+                shapes[line_key] = "pentagon"
+
+    return shapes
 
 
 '''
