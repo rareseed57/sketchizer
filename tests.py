@@ -13,10 +13,11 @@ filter_ink = '<filter id="ink"><feTurbulence baseFrequency="0"/><feDisplacementM
 
 
 def test_flexes(lines_img, sampled, flexes):
+    """ SHOW SAMPLING
     for line_key in sampled.keys():
         for pixel in sampled[line_key]:
             cv2.rectangle(lines_img, (pixel[1], pixel[0]), (pixel[1], pixel[0]), (255, 255, 255), 2)
-
+    """
     for line_key in flexes.keys():
         for pixel in flexes[line_key]:
             cv2.circle(lines_img, (pixel[0][1], pixel[0][0]), 1, (0, 255, 0) if not pixel[1] else (0, 0, 255), 2)
@@ -35,7 +36,7 @@ def test_closures(img, lines, closures):
 
 def test_shapes(img, lines, shapes):
     for line_key in shapes.keys():
-        shape = shapes[line_key]
+        shape = shapes[line_key][0]
         line = lines[line_key]
         pixel = line[0]
         color = (int(img[pixel][0]), int(img[pixel][1]), int(img[pixel][2]))
@@ -55,7 +56,7 @@ def test_is_segment(segment_map, lines, lines_img):
 
 
 def test_drawing():
-    svg_file = open('output/Vectorized_sample.svg', "r")
+    svg_file = open('output/Vectorized.svg', "r")
     html_file = open('output/animation.html', "w")
     svg = svg_file.read()
     html_file.write(

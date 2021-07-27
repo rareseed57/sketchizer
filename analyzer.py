@@ -98,31 +98,33 @@ def find_flexes(derivatives, sampled, corner_thresh, closures, max_chances=2):
         ders = derivatives[line_key]  # Get the derivatives of the current segment
         # Add the first and last sample as corners
         if line_key not in closures:
-            flexes[line_key].append((sampled[line_key][0], True))
-            flexes[line_key].append((sampled[line_key][-1], True))
+            flexes[line_key].append((sampled[line_key][0], True, ders[0][1], ders[0][1]))
+
         rising = ders[1][1] > ders[0][1]
 
         while count <= len(ders) - 1:  # Check of the loop
             der = ders[count - 1]
             next_der = ders[count]
             candidate_flex = der[0]
+            candidate_der = next_der[1]
             corner = abs(next_der[1] - der[1]) > corner_thresh
             if corner:
                 given_chanches = 0
-                flexes[line_key].append((candidate_flex, True))
+                flexes[line_key].append((candidate_flex, True, candidate_der, der[1]))
                 count += 1
                 continue
             # If the second derivative is greater than the
             # treshold, set the
             # flex as a corner
             candidate_flex = der[0] if given_chanches == 0 else candidate_flex
+            candidate_der = next_der[1] if given_chanches == 0 else candidate_der
             if next_der[1] > der[1]:  # If i'm rising (the derivative is greater than before)
                 if not rising:  # and i wasn't rising
                     if given_chanches < max_chances:
                         given_chanches += 1
                     else:
                         given_chanches = 0
-                        flexes[line_key].append((candidate_flex, False))
+                        flexes[line_key].append((candidate_flex, False, candidate_der))
                     rising = True
                 else:  # and i was already rising
                     given_chanches = 0
@@ -132,11 +134,15 @@ def find_flexes(derivatives, sampled, corner_thresh, closures, max_chances=2):
                         given_chanches += 1
                     else:
                         given_chanches = 0
-                        flexes[line_key].append((candidate_flex, False))
+                        flexes[line_key].append((candidate_flex, False, candidate_der))
                     rising = False
                 else:  # If i wasn't rising already
                     given_chanches = 0
             count += 1
+
+        if line_key not in closures:
+            flexes[line_key].append((sampled[line_key][-1], True, ders[-1][1], ders[-1][1]))
+
         if len(flexes[line_key]) == 0:  # Delete empty flexes arrays
             del flexes[line_key]
     return flexes
@@ -202,11 +208,12 @@ def floodfill_line(line):
     img = np.zeros((max_x + 2, max_y + 2, 1), np.uint8)
     for pixel in line:
         img[pixel] = 255
-
+    '''
     h, w = img.shape[:2]
     mask = np.zeros((h + 2, w + 2), np.uint8)
     cv2.floodFill(img, mask, (0, 0), 255)
     img = cv2.bitwise_not(img)
+    '''
 
     return img
 
@@ -214,23 +221,23 @@ def floodfill_line(line):
 def detect_shapes(lines, closures, approx_factor=0.9):
     shapes = {}
     for line_key in lines.keys():
+        if line_key not in closures:
+            continue  # discard lines that aren't closed
         img = floodfill_line(lines[line_key])
-        img = cv2.blur(img, (5, 5))
-        circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 1,
-                                   param1=50, param2=30, minRadius=0, maxRadius=0)
-        if circles is not None and len(circles) == 1:
-            shapes[line_key] = "circle"
+        img = cv2.blur(img, (3, 3))
+        circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT_ALT, 1, 1,
+                                   param1=300, param2=approx_factor*100, minRadius=0, maxRadius=0)
+        if circles is not None:
+            circles = np.uint16(np.around(circles))
+            shapes[line_key] = ("circle", circles[0][0])
             # else check ellipses (not supported)
         else:  # else check other shapes
-            if line_key not in closures:
-                continue  # discard lines that aren't closed
-
             line = np.float32(lines[line_key])
             perimeter = cv2.arcLength(line, True)
             approx = cv2.approxPolyDP(line, approx_factor * perimeter, True)
             # if the shape is a triangle, it will have 3 vertices
             if len(approx) == 3:
-                shapes[line_key] = "triangle"
+                shapes[line_key] = ("triangle", approx)
 
             # if the shape has 4 vertices, it is either a square or
             # a rectangle
@@ -242,12 +249,11 @@ def detect_shapes(lines, closures, approx_factor=0.9):
 
                 # a square will have an aspect ratio that is approximately
                 # equal to one, otherwise, the shape is a rectangle
-                shapes[line_key] = "square" if 0.95 <= ar <= 1.05 else "rectangle"
+                shapes[line_key] = ("square", approx) if 0.95 <= ar <= 1.05 else ("rectangle", approx)
 
             # if the shape is a pentagon, it will have 5 vertices
             elif len(approx) == 5:
-                shapes[line_key] = "pentagon"
-
+                shapes[line_key] = ("pentagon", approx)
     return shapes
 
 

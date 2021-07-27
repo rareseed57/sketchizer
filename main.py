@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import cv2
 import vectorizer
@@ -7,22 +9,45 @@ import random as rng
 from tkinter import *
 import webbrowser
 
-img_name = 'input/bottiglia.PNG'
-img_list = ['bottiglia.PNG', 'logo.jpg', 'debug.png', 'colors.jpg']
+path = os.getcwd()
+
+img_name = 'input/logo.jpg'
+img_list = ['logo.jpg', 'debug.png', 'bottiglia.png', 'colors.jpg']
 img_index = 0
 
 brush_name = 'pencil'
 brush_list = ['pencil', 'ink']
 brush_index = 0
 
+more_controls = False
+
 n_run = 0
 
-HEIGHT = 500
+WIN_SIZE = 400
+
+# default parameters
+thresh1hue = 0
+thresh2hue = 179
+sample_step = 20
+corner_thresh = 80
+n_chances = 1
+blur_ratio = 3
+thresh1can = 100
+thresh2can = 200
+approx_factor = 0.3
 
 
 def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
-    (h, w) = image.shape[:2]
+    global WIN_SIZE
+    background = np.zeros((WIN_SIZE, WIN_SIZE, 3), np.uint8)
 
+    (h, w) = image.shape[:2]
+    if max(h, w) == h:
+        width = None
+        height = WIN_SIZE
+    else:
+        height = None
+        width = WIN_SIZE
     if width is None and height is None:
         return image
     if width is None:
@@ -32,55 +57,70 @@ def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
         r = width / float(w)
         dim = (width, int(h * r))
 
-    # Temporarily deactivates resizing
-    # return image
-    return cv2.resize(image, dim, interpolation=inter)
+    image = cv2.resize(image, dim, interpolation=inter)
+    start_roi_row = int(WIN_SIZE / 2 - image.shape[1] / 2)
+    start_roi_col = int(WIN_SIZE / 2 - image.shape[0] / 2)
+    end_roi_row = int(WIN_SIZE / 2 + image.shape[1] / 2)
+    end_roi_col = int(WIN_SIZE / 2 + image.shape[0] / 2)
+    background[start_roi_col:end_roi_col, start_roi_row:end_roi_row] = image
+    return background
+
+
+# function to display the coordinates of
+# of the points clicked on the image
+def click_event(event, x, y, flags, params):
+    # checking for right mouse clicks
+    if event == cv2.EVENT_RBUTTONDOWN:
+        # displaying the coordinates
+        # on the Shell
+        print('Coords: x = ', x, ' y = ', y)
 
 
 # For HSV: hue range is [0,179], saturation range is [0,255], and value range is [0,255].
 
 def refresh():
-    global n_run
-    # Image reading and conversion to HSV color spasce to carry out a tresholding ###############
+    print('---------------------------------------------------------------------------')
+    global n_run, thresh1hue, thresh2hue, sample_step, corner_thresh, n_chances, blur_ratio, thresh1can, thresh2can, approx_factor
+    # Image reading and conversion to HSV color space to carry out a tresholding ###############
     img = cv2.imread(img_name)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    ### Getting and checking all the values of the trackbars into variables #################
-    thresh1hue = cv2.getTrackbarPos('Hue L', 'Original')
-    thresh2hue = cv2.getTrackbarPos('Hue H', 'Original')
+    if more_controls:
+        ### Getting and checking all the values of the trackbars into variables #################
+        thresh1hue = cv2.getTrackbarPos('Hue L', 'Original')
+        thresh2hue = cv2.getTrackbarPos('Hue H', 'Original')
 
-    # thresh1sat = cv2.getTrackbarPos('Saturation 1', 'Original')
-    # thresh2sat = cv2.getTrackbarPos('Saturation 2', 'Original')
+        # thresh1sat = cv2.getTrackbarPos('Saturation 1', 'Original')
+        # thresh2sat = cv2.getTrackbarPos('Saturation 2', 'Original')
 
-    # thresh1val = cv2.getTrackbarPos('Value 1', 'Original')
-    # thresh2val = cv2.getTrackbarPos('Value 2', 'Original')
+        # thresh1val = cv2.getTrackbarPos('Value 1', 'Original')
+        # thresh2val = cv2.getTrackbarPos('Value 2', 'Original')
+        blur_ratio = round(cv2.getTrackbarPos('Blur ratio', 'Lines') * 0.06)
+
+        if blur_ratio == 0:
+            blur_ratio = 1
+
+        thresh1can = cv2.getTrackbarPos('Canny L', 'Lines')
+        thresh2can = cv2.getTrackbarPos('Canny H', 'Lines')
+
+        ### Inverting the thresholds if inconsistent #################
+
+        if thresh2hue < thresh1hue:
+            tmp = thresh2hue
+            thresh2hue = thresh1hue
+            thresh1hue = tmp
+
+        if thresh2can < thresh1can:
+            tmp = thresh2can
+            thresh2can = thresh1can
+            thresh1can = tmp
 
     sample_step = cv2.getTrackbarPos('Sampling step', 'Test')
-    # der_thresh = cv2.getTrackbarPos('Derivative thresh', 'is_segment test') # deprecated
     corner_thresh = cv2.getTrackbarPos('Corner thresh', 'Test') / 1000
-
     n_chances = cv2.getTrackbarPos('#Chances', 'Test')
-
-    blur_ratio = round(cv2.getTrackbarPos('Blur ratio', 'Lines') * 0.06)
-
-    if blur_ratio == 0:
-        blur_ratio = 1
-
-    thresh1can = cv2.getTrackbarPos('Canny L', 'Lines')
-    thresh2can = cv2.getTrackbarPos('Canny H', 'Lines')
-    approx_factor = cv2.getTrackbarPos('Approx factor', 'Lines')/1000
-
-    ### Inverting the thresholds if inconsistent #################
-
-    if thresh2hue < thresh1hue:
-        tmp = thresh2hue
-        thresh2hue = thresh1hue
-        thresh1hue = tmp
-
-    if thresh2can < thresh1can:
-        tmp = thresh2can
-        thresh2can = thresh1can
-        thresh1can = tmp
+    approx_factor = cv2.getTrackbarPos('Approx factor', 'Test') / 1000
+    if approx_factor > 1 or approx_factor < 0:
+        approx_factor = 0.3
 
     mask = cv2.inRange(hsv, (thresh1hue, 0, 0), (thresh2hue, 255, 255))
     h, s, v = cv2.split(hsv)
@@ -88,7 +128,8 @@ def refresh():
     hsv = cv2.merge([h, s, np.multiply(v, -mask)])
 
     img_bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    cv2.imshow('Original', resizeAR(img_bgr, height=HEIGHT))
+    if more_controls:
+        cv2.imshow('Original', resizeAR(img_bgr))
 
     img_bn = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.blur(img_bn, (blur_ratio, blur_ratio))
@@ -107,12 +148,11 @@ def refresh():
 
     closures = analyzer.check_closures(lines, 2)
 
-    shapes = analyzer.detect_shapes(lines, closures, approx_factor=approx_factor)
+    shapes = analyzer.detect_shapes(lines, closures, approx_factor=1-approx_factor)
 
     test = tests.test_closures(lines_img.copy(), lines, closures)
-    test = tests.test_shapes(test, lines, shapes.copy())
-
-    cv2.imshow("Lines", resizeAR(test, height=HEIGHT))
+    if more_controls:
+        cv2.imshow("Lines", resizeAR(test))
 
     sampled = analyzer.sample(lines.copy(), sample_step)
 
@@ -120,19 +160,23 @@ def refresh():
     # tests.test_is_segment(_segment_map, _lines.copy(), _lines_img.copy())
 
     flexes = analyzer.find_flexes(derivatives, sampled, corner_thresh, closures, n_chances)
+    test = tests.test_shapes(lines_img.copy(), lines, shapes.copy())
+    test = tests.test_flexes(test, sampled.copy(), flexes.copy())
 
-    cv2.imshow("Test", resizeAR(tests.test_flexes(lines_img.copy(), sampled.copy(), flexes.copy()), height=HEIGHT))
+    # cv2.namedWindow("Test", cv2.WINDOW_FULLSCREEN)
+    cv2.imshow("Test", resizeAR(test))
     # print('sampled:' + str(sampled))
     # print('derivatives:' + str(derivatives))
     # print('segments:' + str(segment_map))
     # print('flexes:' + str(flexes))
 
-    vectorizer.vectorize_samples(edges.shape[0], edges.shape[1], sampled, filter=brush_name)
+    # vectorizer.vectorize_samples(edges.shape[0], edges.shape[1], sampled, filter=brush_name)
+    vectorizer.vectorize_flexes(edges.shape[0], edges.shape[1], flexes, closures, shapes, filter=brush_name)
     tests.test_drawing()
 
     cv2.imwrite('output/linesoutput.png', lines_img)
     # if n_run == 1:
-    #   webbrowser.open("file://C:/Users/rares/PycharmProjects/CVProject/output/animation.html")
+    #   webbrowser.open("file://" + path + "/output/animation.html")
 
     n_run += 1
 
@@ -159,13 +203,31 @@ def change_brush():
     refresh()
 
 
-if __name__ == '__main__':
-    # Trackbar creation to adjust tresholds and settings #########################################
+def change_controls():
+    global more_controls
+    more_controls = not more_controls
+    if not more_controls:
+        print('Now using less controls.')
+        btn_controls.config(text='Off')
+        cv2.destroyWindow("Original")
+        cv2.destroyWindow("Lines")
+    else:
+        print('Now using more controls.')
+        btn_controls.config(text='On')
+        cv2.namedWindow("Original", cv2.WINDOW_FULLSCREEN)
+        cv2.namedWindow("Lines", cv2.WINDOW_FULLSCREEN)
+        create_trackbars()
 
     refresh()
 
-    # Trackbars for tresholding
 
+def sketchize():
+    webbrowser.open("file://" + path + "/output/animation.html")
+
+
+def create_trackbars():
+    # Trackbar creation to adjust tresholds and settings #########################################
+    # Trackbars for tresholding
     cv2.createTrackbar('Hue L', 'Original', 0, 179, lambda x: refresh())
     cv2.createTrackbar('Hue H', 'Original', 179, 179, lambda x: refresh())
     # cv2.createTrackbar('Saturation 1', 'Original', 0, 255, lambda x: refresh())
@@ -178,7 +240,6 @@ if __name__ == '__main__':
     cv2.createTrackbar('Blur ratio', 'Lines', 50, 100, lambda x: refresh())
     cv2.createTrackbar('Canny L', 'Lines', 100, 500, lambda x: refresh())
     cv2.createTrackbar('Canny H', 'Lines', 200, 500, lambda x: refresh())
-    cv2.createTrackbar('Approx factor', 'Lines', 900, 1000, lambda x: refresh())
 
     # Trackbars to adjust the analyzer settings
 
@@ -188,10 +249,27 @@ if __name__ == '__main__':
     cv2.createTrackbar('Corner thresh', 'Test', 80, 1000, lambda x: refresh())
     cv2.createTrackbar('#Chances', 'Test', 2, 10, lambda x: refresh())
 
+    cv2.createTrackbar('Approx factor', 'Test', 30, 1000, lambda x: refresh())
+
+
+if __name__ == '__main__':
+    cv2.namedWindow("Original", cv2.WINDOW_FULLSCREEN)
+    cv2.namedWindow("Lines", cv2.WINDOW_FULLSCREEN)
+    cv2.namedWindow("Test", cv2.WINDOW_FULLSCREEN)
+
     refresh()
 
+    create_trackbars()
+
+    refresh()
+
+    cv2.destroyWindow("Original")
+    cv2.destroyWindow("Lines")
+
+    cv2.setMouseCallback('Test', click_event)
+
     root = Tk()
-    root.geometry("250x180")
+    root.geometry("250x350")
 
     Label(root, text=" ").pack()
 
@@ -210,6 +288,18 @@ if __name__ == '__main__':
     btn_brush.pack()
 
     Label(root, text=" ").pack()
+
+    label_brush = Label(root, text='SHOW MORE CONTROLS')
+    label_brush.pack()
+    btn_controls = Button(root, text='off', padx=5, pady=5, command=change_controls)
+    btn_controls.pack()
+
+    Label(root, text=" ").pack()
+
+    label_result = Label(root, text='Result')
+    label_result.pack()
+    btn_result = Button(root, text='Sketch it!', padx=5, pady=5, command=sketchize)
+    btn_result.pack()
 
     root.mainloop()
 

@@ -1,4 +1,4 @@
-var paths = document.querySelectorAll('path');
+var paths = document.querySelectorAll('path, rect, circle, polygon, line');
 for (var i = 0; i < paths.length; i++) {
   var path = paths[i];
   var length = path.getTotalLength();
@@ -16,3 +16,4 @@ for (var i = 0; i < paths.length; i++) {
   // Go!
   path.style.strokeDashoffset = '0';
 }
+
