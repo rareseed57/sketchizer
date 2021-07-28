@@ -12,12 +12,11 @@ filter_ink = '<filter id="ink"><feTurbulence baseFrequency="0"/><feDisplacementM
              'scale="10"/></filter> '
 
 
-def test_flexes(lines_img, sampled, flexes):
-    """ SHOW SAMPLING
-    for line_key in sampled.keys():
-        for pixel in sampled[line_key]:
-            cv2.rectangle(lines_img, (pixel[1], pixel[0]), (pixel[1], pixel[0]), (255, 255, 255), 2)
-    """
+def test_flexes(lines_img, sampled, flexes, show_samples=False):
+    if show_samples:
+        for line_key in sampled.keys():
+            for pixel in sampled[line_key]:
+                cv2.rectangle(lines_img, (pixel[1], pixel[0]), (pixel[1], pixel[0]), (255, 255, 255), 2)
     for line_key in flexes.keys():
         for pixel in flexes[line_key]:
             cv2.circle(lines_img, (pixel[0][1], pixel[0][0]), 1, (0, 255, 0) if not pixel[1] else (0, 0, 255), 2)
