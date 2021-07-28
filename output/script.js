@@ -12,7 +12,7 @@ for (var i = 0; i < paths.length; i++) {
   path.getBoundingClientRect();
   // Define our transition
   path.style.transition = path.style.WebkitTransition =
-    'stroke-dashoffset 1s ease-in-out';
+    'stroke-dashoffset 4s ease-in-out';
   // Go!
   path.style.strokeDashoffset = '0';
 }
