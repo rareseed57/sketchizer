@@ -8,7 +8,7 @@ The app's purpose is to quickly generate a prototype that could be further manua
 
 ### Requirements/venv
 
-
+[WIP]
 
 ### How to use
 
