@@ -28,20 +28,113 @@ WIN_SIZE = 400
 # default parameters
 thresh1hue = 0
 thresh2hue = 179
-sample_step = 20
+sample_step = 5
 corner_thresh = 80
-n_chances = 1
+n_chances = 0
 blur_ratio = 3
 thresh1can = 100
 thresh2can = 200
 approx_factor = 0.3
 
+# -----------
+test_image = np.zeros((WIN_SIZE, WIN_SIZE, 3), np.uint8)
+test_copy = test_image.copy()
+isDrawing = False
+isCrop = False
+refPoints = [[-1, -1]]
+xTemp, yTemp = 0, 0
 
-def resizeAR(image, width=None, height=None, inter=cv2.INTER_AREA):
+
+def remap_coords(coords):
+    global test_image
+    size = test_image.shape[0], test_image.shape[1]
+    max_size = max(size)
+    min_size = min(size)
+    new_coords = list(coords)
+
+    zoom_factor = WIN_SIZE / max_size
+
+    SHORT_WIN_SIZE = min_size * zoom_factor
+
+    if max_size == size[0]:
+        new_coords[0] = int((coords[0] - (WIN_SIZE - SHORT_WIN_SIZE) / 2) / zoom_factor)
+        new_coords[1] = int(coords[1] / zoom_factor)
+    else:
+        new_coords[0] = int(coords[0] / zoom_factor)
+        new_coords[1] = int((coords[1] - (WIN_SIZE - SHORT_WIN_SIZE) / 2) / zoom_factor)
+
+    return new_coords
+
+
+def click_to_crop(event, x, y, flags, param):
+    global isCrop, refPoints, isDrawing, xTemp, yTemp, test_copy
+    x, y = remap_coords((x, y))
+    # left mouse click
+    if event == cv2.EVENT_LBUTTONDOWN:
+        isDrawing = True
+        if x < 1:
+            x = 1
+        elif x > test_image.shape[1]:
+            x = test_image.shape[1] - 1
+        if y < 1:
+            y = 1
+        elif y > test_image.shape[0]:
+            y = test_image.shape[0] - 1
+        refPoints = [[x, y]]
+        xTemp, yTemp = x, y
+    # mouse move
+    elif event == cv2.EVENT_MOUSEMOVE and isDrawing:
+        if x < 1:
+            x = 1
+        elif x > test_image.shape[1]:
+            x = test_image.shape[1] - 1
+        if y < 1:
+            y = 1
+        elif y > test_image.shape[0]:
+            y = test_image.shape[0] - 1
+        copy = test_image.copy()
+        xTemp, yTemp = x, y
+        cv2.rectangle(copy, tuple(refPoints[0]), (xTemp, yTemp), (255, 255, 255), 2)
+        cv2.imshow("Test", resizeAR(copy))
+
+    # left mouse was release
+    elif event == cv2.EVENT_LBUTTONUP:
+        if x == refPoints[0][0] and y == refPoints[0][1]:
+            cv2.imshow("Test", resizeAR(test_image))
+        if x < 1:
+            x = 1
+        elif x > test_image.shape[1]:
+            x = test_image.shape[1] - 1
+        if y < 1:
+            y = 1
+        elif y > test_image.shape[0]:
+            y = test_image.shape[0] - 1
+        refPoints.append([x, y])
+        isDrawing = False
+        isCrop = True
+
+        # verification of start point to draw
+        for i in (0, 1):
+            if refPoints[0][i] > refPoints[1][i]:
+                xTemp = refPoints[1][i]
+                refPoints[1][i] = refPoints[0][i]
+                refPoints[0][i] = xTemp
+        cv2.rectangle(test_copy, tuple(refPoints[0]), tuple(refPoints[1]), (0, 255, 0), 1)
+
+        cv2.imshow("Test", resizeAR(test_image[refPoints[0][1]:refPoints[1][1], refPoints[0][0]:refPoints[1][0]]))
+    elif event == cv2.EVENT_RBUTTONDOWN:
+        refPoints = [[-1, -1]]
+        isCrop = False
+        refresh()
+
+
+def resizeAR(image, width=WIN_SIZE, height=None, inter=cv2.INTER_AREA):
     global WIN_SIZE
     background = np.zeros((WIN_SIZE, WIN_SIZE, 3), np.uint8)
 
     (h, w) = image.shape[:2]
+    if h == 0 or w == 0:
+        return image
     if max(h, w) == h:
         width = None
         height = WIN_SIZE
@@ -80,9 +173,21 @@ def click_event(event, x, y, flags, params):
 
 def refresh():
     print('---------------------------------------------------------------------------')
-    global n_run, thresh1hue, thresh2hue, sample_step, corner_thresh, n_chances, blur_ratio, thresh1can, thresh2can, approx_factor
+    global n_run, thresh1hue, thresh2hue, sample_step, corner_thresh, n_chances, blur_ratio, thresh1can, thresh2can, approx_factor, test_image
     # Image reading and conversion to HSV color space to carry out a tresholding ###############
     img = cv2.imread(img_name)
+    valid_crop = True
+    for p in refPoints:
+        if p[0] < 1:
+            valid_crop = False
+        elif p[0] > img.shape[1]:
+            valid_crop = False
+        if p[1] < 1:
+            valid_crop = False
+        elif p[1] > img.shape[0]:
+            valid_crop = False
+    if valid_crop:
+        img = img[refPoints[0][1]:refPoints[1][1], refPoints[0][0]:refPoints[1][0]]
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     if more_controls:
@@ -148,7 +253,7 @@ def refresh():
 
     closures = analyzer.check_closures(lines, 2)
 
-    shapes = analyzer.detect_shapes(lines, closures, approx_factor=1-approx_factor)
+    shapes = analyzer.detect_shapes(lines, closures, approx_factor=1 - approx_factor)
 
     test = tests.test_closures(lines_img.copy(), lines, closures)
     if more_controls:
@@ -164,7 +269,9 @@ def refresh():
     test = tests.test_flexes(test, sampled.copy(), flexes.copy())
 
     # cv2.namedWindow("Test", cv2.WINDOW_FULLSCREEN)
+    test_image = test
     cv2.imshow("Test", resizeAR(test))
+    cv2.setMouseCallback("Test", click_to_crop)
     # print('sampled:' + str(sampled))
     # print('derivatives:' + str(derivatives))
     # print('segments:' + str(segment_map))
@@ -182,13 +289,16 @@ def refresh():
 
 
 def change_img():
-    global img_index, img_name, img_list
+    global img_index, img_name, img_list, refPoints, isCrop
     img_index += 1
     if img_index > len(img_list) - 1:
         img_index = 0
     img_name = 'input/' + img_list[img_index]
     print('Now using ' + img_name)
     btn_img.config(text=img_name)
+    refPoints = [[-1, -1]]
+    isCrop = False
+    cv2.imshow("Test", resizeAR(test_image))
     refresh()
 
 
@@ -222,6 +332,7 @@ def change_controls():
 
 
 def sketchize():
+    refresh()
     webbrowser.open("file://" + path + "/output/animation.html")
 
 
@@ -243,11 +354,11 @@ def create_trackbars():
 
     # Trackbars to adjust the analyzer settings
 
-    cv2.createTrackbar('Sampling step', 'Test', 10, 100, lambda x: refresh())
+    cv2.createTrackbar('Sampling step', 'Test', 5, 100, lambda x: refresh())
     cv2.createTrackbar('Derivative thresh', 'is_segment test', 1, 1000, lambda: refresh())
 
     cv2.createTrackbar('Corner thresh', 'Test', 80, 1000, lambda x: refresh())
-    cv2.createTrackbar('#Chances', 'Test', 2, 10, lambda x: refresh())
+    cv2.createTrackbar('#Chances', 'Test', 0, 10, lambda x: refresh())
 
     cv2.createTrackbar('Approx factor', 'Test', 30, 1000, lambda x: refresh())
 
@@ -265,8 +376,6 @@ if __name__ == '__main__':
 
     cv2.destroyWindow("Original")
     cv2.destroyWindow("Lines")
-
-    cv2.setMouseCallback('Test', click_event)
 
     root = Tk()
     root.geometry("250x350")
