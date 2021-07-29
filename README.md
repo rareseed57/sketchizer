@@ -6,7 +6,7 @@ Sketchizer is a program that enables you to turn an image into a hand drawing-li
 
 The app's purpose is to quickly generate a prototype that could be further manually edited using a .svg editor tool; or just to directly transform an image into a simpler outline.
 
-![overview](https://github.com/rareseed57/sketchizer/blob/stable/res/overview.gif "Overview")
+![overview](https://github.com/rareseed57/sketchizer/blob/stable/doc/overview.gif "Overview")
 
 ### How to use
 
@@ -22,7 +22,7 @@ A little GUI, which allows to select the **input** image and the **brush** used.
 
 The main program essentially initializes all the parameters of the image processing functions, and sets up the interface.
 
-Here all the **track bars** of the image windows are created, and the **refresh()** function, which re-runs all the processing with the current parameters, is called as soon as one slider is moved.
+Here all the **track bars** of the image windows are created, and the **`refresh`()** function, which re-runs all the processing with the current parameters, is called as soon as one slider is moved.
 
 The window with the buttons is created using the library **tkinter** for python; the buttons switch some other parameters accessing lists in a cyclic way.
 
@@ -40,6 +40,8 @@ To do so, a region growing-like algorithm has been implemented: a random pixel o
 **`returns`** the edge detection image, where each separate line has been colored for debugging purposes.
 
 **`returns`** a dictionary containing a key for each separate line. Each key is associated to an ordered list of pixels (coordinates in a tuple) of the corresponding line.
+
+![Lines result](https://github.com/rareseed57/sketchizer/blob/stable/doc/Debug1.png "Result image")
 
 #### **`sample(lines, step)`**
 
@@ -71,6 +73,8 @@ This function detects the flexes of the lines: they can be angular (corners) or 
 
 **`returns`** a dictionary containing, for each line, a tuple with the coordinates  of the flex, a flag to specify if the flex is a corner,  the new slope and the old one. These values will be useful later to set up the handles of the *polybezier* curves.
 
+![Flexes result](https://github.com/rareseed57/sketchizer/blob/stable/doc/Debug2.png)
+
 #### **`detect_shapes(lines, closures, approx_factor=0.9)`**
 
 This function leverages openCV methods to detect basic shapes. An empty image is created and the single line is drawn in it; then the image is blurred and the `cv2.HoughCircles` function is called to check if it is a circle. To control the approximation level, the *HOUGH_GRADIENT* version is used, which accepts a "perfectness" threshold for the circles to detect. If no circles are detected, the coordinates of pixels are passed to the `cv2.approxPolyDP` function which simplifies it with less points: the number of points is checked to recognize the polygon.
@@ -82,6 +86,8 @@ This function leverages openCV methods to detect basic shapes. An empty image is
 **`approx_factor`** is the factor which determines the maximum number of points to use when approximating the line with `cv2.approxPolyDP` function. It also multiplies the "perfectness" threshold of `cv2.HoughCircles`. In general, it determines how much the lines are approximated to basic shapes (polygons and circles).
 
 **`returns`** a dictionary containing, for each approximated line key, the name of the shape and the data to draw them.
+
+![Shape detection result](https://github.com/rareseed57/sketchizer/blob/stable/doc/Debug3.png)
 
 ### Test.py
 
@@ -138,4 +144,8 @@ This function generates the output .svg file. For each line, the ordered nodes a
 **`filter`** is a string which specifies the id of the filter (brush) to draw the paths and the shape with.
 
 **`returns`** The final .svg file.
+
+![Vectorization result](https://github.com/rareseed57/sketchizer/blob/stable/doc/Vectorized.png)
+
+![Vectorization result closeup](https://github.com/rareseed57/sketchizer/blob/stable/doc/Closeup.png)
 
