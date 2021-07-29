@@ -6,7 +6,7 @@ Sketchizer is a program that enables you to turn an image into a hand drawing-li
 
 The app's purpose is to quickly generate a prototype that could be further manually edited using a .svg editor tool; or just to directly transform an image into a simpler outline.
 
-![overview](https://github.com/rareseed57/sketchizer/blob/stable/doc/overview.gif "Overview" | height=150)
+![overview](https://github.com/rareseed57/sketchizer/blob/stable/doc/overview.gif "Overview")
 
 ### How to use
 
