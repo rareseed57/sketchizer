@@ -15,7 +15,7 @@ s = [-1, 0, +1, 0, -1, -1, +1, +1]
 
 def checkinrange(center, target, r=1):
     if target[0] in range(center[0] - r, center[0] + r + 1) and target[1] in range(center[1] - r, center[1] + r + 1):
-        return True
+        return True 
     return False
 
 

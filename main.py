@@ -9,10 +9,11 @@ import random as rng
 from tkinter import *
 import webbrowser
 
-path = os.getcwd()
 
-img_name = 'input/logo.jpg'
-img_list = ['logo.jpg', 'debug.png', 'bottiglia.png', 'colors.jpg']
+path = os.path.dirname(os.path.realpath(__file__))
+img_list = os.listdir(path+'/input')
+# img_list = ['logo.jpg', 'debug.png', 'bottiglia.png', 'colors.jpg']
+img_name = 'input/'+img_list[0]
 img_index = 0
 
 brush_name = 'pencil'

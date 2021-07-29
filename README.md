@@ -33,7 +33,7 @@ This module contains all the image processing functions. Here are the most impor
 #### **`find_lines(edges_img)`**
 
 This function's purpose is to store each separate line in different data structures. Of course, the pixels in the line have to be stored in a sequential order to avoid a "back and forth" effect in the final drawing. 
-To do so, a region growing-like algorithm has been implemented: a random pixel of an edge is selected and all the neighbors are explored in both directions. To assure the order, the pixels are appended or pushed in the list basing of the explored direction.
+To do so, a region growing-like algorithm has been implemented: a random pixel of an edge is selected and all the neighbors are explored in both directions. To assure the order, the pixels are appended or pushed in the list basing on the explored direction.
 
 **`edges_img`** is a binary image containing the result of a Canny edge detection filter on the original image.
 
